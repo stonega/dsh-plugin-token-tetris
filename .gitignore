@@ -1,0 +1,9 @@
+node_modules/
+.build/
+.dsh-test/
+.publish-test/
+.npm-cache/
+.npm-logs/
+.docs/
+harness/dist.js
+*.tgz

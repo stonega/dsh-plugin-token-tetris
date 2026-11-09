@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token Tetris harness</title>
+    <link rel="stylesheet" href="./theme/base.css" />
+    <link rel="stylesheet" href="./theme/design-platform.css" />
+    <link rel="stylesheet" href="./theme/gradient.css" />
+    <link rel="stylesheet" href="./theme/corner.css" />
+    <link rel="stylesheet" href="./theme/focus.css" />
+    <link rel="stylesheet" href="./theme/scrollbar.css" />
+    <style>
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        background: var(--dsw-alias-bg-base);
+        color: var(--dsw-alias-label-primary);
+        font-family: var(--dsw-font-family);
+      }
+
+      .harness-frame {
+        position: relative;
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      .harness-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 22px 18px;
+        border-right: 1px solid var(--dsw-alias-border-l3);
+        background: var(--dsw-specific-sidebar-fill);
+        font-size: 13px;
+        color: var(--dsw-alias-label-secondary);
+      }
+
+      .harness-sidebar .harness-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: var(--dsw-alias-label-primary);
+      }
+
+      .harness-sidebar .harness-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--dsw-alias-state-success-primary);
+      }
+
+      .harness-sidebar .harness-row {
+        padding: 6px 8px;
+        border-radius: 6px;
+      }
+
+      .harness-sidebar .harness-row.active {
+        background: var(--dsw-specific-sidebar-nav-item-active);
+        color: var(--dsw-alias-label-primary);
+      }
+
+      .harness-center {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .harness-copy {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 112px 28px 120px;
+        font-size: 15px;
+        line-height: 1.8;
+        color: var(--dsw-alias-label-secondary);
+      }
+
+      .harness-title {
+        margin-bottom: 18px;
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--dsw-alias-label-primary);
+      }
+
+      .harness-copy p {
+        margin: 0 0 18px;
+      }
+
+      .harness-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        pointer-events: none;
+      }
+
+      .harness-controls {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 100;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        max-width: 560px;
+        padding: 8px 10px;
+        border: 1px solid var(--dsw-alias-border-l2);
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 88%, transparent);
+        box-shadow: var(--dsw-elevation-panel);
+        font-size: 12px;
+      }
+
+      .harness-controls button {
+        padding: 3px 8px;
+        border: 1px solid var(--dsw-alias-border-l2);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--dsw-alias-label-secondary);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .harness-controls label {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--dsw-alias-label-secondary);
+      }
+
+      .harness-controls input[type='range'] {
+        width: 130px;
+      }
+
+      body[data-clean='true'] .harness-controls {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="harness-frame">
+      <aside class="harness-sidebar">
+        <div class="harness-brand"><span class="harness-dot"></span>DeepSeek Harness</div>
+        <div class="harness-row active">New session</div>
+        <div class="harness-row">Workspace</div>
+        <div class="harness-row">Plugins</div>
+        <div class="harness-row">Automations</div>
+        <div class="harness-row">Settings</div>
+      </aside>
+      <main class="harness-center">
+        <div class="harness-copy" aria-hidden="true">
+          <div class="harness-title">DeepSeek Harness</div>
+          <p>
+            The agent is working. Tokens stream from the assistant, and the fall speed follows the
+            returned-token rate. This layer is deliberately click-through outside the panel, so the
+            conversation underneath stays usable.
+          </p>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante
+            venenatis dapibus posuere velit aliquet. Cras mattis consectetur purus sit amet fermentum.
+          </p>
+          <p>
+            Donec ullamcorper nulla non metus auctor fringilla. Vestibulum id ligula porta felis euismod
+            semper. Maecenas faucibus mollis interdum.
+          </p>
+        </div>
+      </main>
+      <div class="harness-overlay" data-shell-overlay>
+        <div id="root"></div>
+      </div>
+    </div>
+    <script type="module" src="./dist.js"></script>
+  </body>
+</html>

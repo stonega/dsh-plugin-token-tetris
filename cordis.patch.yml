@@ -1,0 +1,9 @@
+# Token Tetris bundle layer.
+#
+# The row names this package (not a source path): after `dsh plugin add`, Node
+# resolves it from the profile's installed package and loads lib/index.js as the
+# Host half. dsh-client-modules finds the same package manifest and serves the
+# `./client` browser bundle through `dsh.client`.
+- insert:
+    - id: token-tetris
+      name: dsh-tetris-plugin
