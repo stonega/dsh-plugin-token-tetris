@@ -25,6 +25,13 @@ export type GameStatus = 'playing' | 'paused' | 'over'
 /** Grace period after a piece touches down; horizontal moves can still adjust it. */
 export const LOCK_DELAY_MS = 260
 
+/** One piece's last locked cells, used by the presentation layer's sand effect. */
+export interface LockEvent {
+  readonly id: number
+  readonly kind: PieceKind
+  readonly cells: readonly (readonly [number, number])[]
+}
+
 export interface GameState {
   readonly board: Board
   readonly active: ActivePiece
@@ -36,6 +43,8 @@ export interface GameState {
   readonly highScore: number
   /** Milliseconds spent resting on the stack during the current lock delay. */
   readonly lockTime: number
+  /** The most recent lock, or null before the first piece settles. */
+  readonly lastLock: LockEvent | null
 }
 
 export type GameAction =
@@ -200,6 +209,7 @@ function withHighScore(state: GameState): GameState {
 
 function lockPiece(state: GameState): GameState {
   const board = state.board.map((row) => [...row])
+  const lockedCells: Array<readonly [number, number]> = []
   let toppedOut = false
   for (const [dx, dy] of cellsOf(state.active)) {
     const x = state.active.x + dx
@@ -208,7 +218,10 @@ function lockPiece(state: GameState): GameState {
       toppedOut = true
       continue
     }
-    if (board[y] !== undefined) board[y]![x] = state.active.kind
+    if (board[y] !== undefined) {
+      board[y]![x] = state.active.kind
+      lockedCells.push([x, y])
+    }
   }
 
   const kept = board.filter((row) => row.some((cell) => cell === null))
@@ -237,6 +250,14 @@ function lockPiece(state: GameState): GameState {
     level,
     status: over ? 'over' : 'playing',
     lockTime: 0,
+    lastLock:
+      lockedCells.length === 0
+        ? state.lastLock
+        : {
+            id: (state.lastLock?.id ?? 0) + 1,
+            kind: state.active.kind,
+            cells: lockedCells,
+          },
   })
 }
 
@@ -270,6 +291,7 @@ export function createInitialState(highScore = 0): GameState {
     status: 'playing',
     highScore: Math.max(0, highScore),
     lockTime: 0,
+    lastLock: null,
   }
 }
 

@@ -17,6 +17,8 @@ import {
   renderGrid,
   saveHighScore,
   type GameAction,
+  type LockEvent,
+  type PieceKind,
 } from './game'
 import { loadLayout, saveLayout } from './layout'
 import type { TokenRateSnapshot } from './token-rate'
@@ -66,6 +68,20 @@ interface ResizeState {
 interface RepeatState {
   timeout: number
   interval: number
+}
+
+interface SandParticle {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  size: number
+  rotation: number
+  spin: number
+  life: number
+  maxLife: number
+  alphaScale: number
+  color: string
 }
 
 const MIN_CELL = 10
@@ -188,6 +204,10 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
 
   const rootRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const particlesRef = useRef<SandParticle[]>([])
+  const sandFrameRef = useRef<number | null>(null)
+  const sandDprRef = useRef(1)
   const stateRef = useRef(state)
   stateRef.current = state
   const cellRef = useRef(cell)
@@ -234,9 +254,183 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const next = useMemo(() => previewGrid(state.queue[0] ?? 'I'), [state.queue])
   const ratePercent = Math.min(100, (tokens / 80) * 100)
 
+  const resolvePieceColor = (kind: PieceKind): string => {
+    const panel = panelRef.current
+    if (panel === null) return '#888888'
+    const swatch = document.createElement('span')
+    swatch.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;width:0;height:0;background:var(--tt-${kind.toLowerCase()})`
+    panel.append(swatch)
+    const color = getComputedStyle(swatch).backgroundColor
+    swatch.remove()
+    return color === '' || color === 'rgba(0, 0, 0, 0)' ? '#888888' : color
+  }
+
+  const startSandLoop = (): void => {
+    if (sandFrameRef.current !== null) return
+    let last = performance.now()
+    const frame = (now: number): void => {
+      sandFrameRef.current = null
+      const canvas = canvasRef.current
+      const context = canvas?.getContext('2d')
+      if (canvas === null || context === null) return
+      const dt = Math.min((now - last) / 1000, 0.05)
+      last = now
+      const dpr = sandDprRef.current
+      const width = canvas.width / dpr
+      const height = canvas.height / dpr
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
+      context.clearRect(0, 0, width, height)
+      const particles = particlesRef.current
+      for (let index = particles.length - 1; index >= 0; index -= 1) {
+        const particle = particles[index]
+        if (particle === undefined) continue
+        particle.life -= dt
+        if (particle.life <= 0 || particle.y > height + 24) {
+          particles.splice(index, 1)
+          continue
+        }
+        particle.vy += 320 * dt
+        particle.vx *= 1 - Math.min(0.2, dt * 1.8)
+        particle.x += particle.vx * dt
+        particle.y += particle.vy * dt
+        particle.rotation += particle.spin * dt
+        const alpha = Math.max(0, particle.life / particle.maxLife) * particle.alphaScale
+        context.globalAlpha = alpha
+        context.fillStyle = particle.color
+        context.save()
+        context.translate(particle.x, particle.y)
+        context.rotate(particle.rotation)
+        context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size)
+        context.restore()
+      }
+      context.globalAlpha = 1
+      if (particles.length === 0) return
+      sandFrameRef.current = requestAnimationFrame(frame)
+    }
+    sandFrameRef.current = requestAnimationFrame(frame)
+  }
+
+  const spawnSand = (lock: LockEvent): void => {
+    const cell = displayCell
+    const step = cell + 1
+    const pad = 5
+    const color = resolvePieceColor(lock.kind)
+    const particles = particlesRef.current
+    for (const [cellX, cellY] of lock.cells) {
+      const centerX = pad + cellX * step + cell / 2
+      const centerY = pad + cellY * step + cell / 2
+      const grains = 16 + Math.floor(Math.random() * 6)
+      for (let index = 0; index < grains; index += 1) {
+        const size = Math.max(1.4, cell * (0.08 + Math.random() * 0.1))
+        const life = 0.85 + Math.random() * 0.5
+        particles.push({
+          x: centerX + (Math.random() - 0.5) * cell * 0.9,
+          y: centerY + (Math.random() - 0.5) * cell * 0.9,
+          vx: (Math.random() - 0.5) * cell * 5,
+          vy: -cell * (0.8 + Math.random() * 1.6),
+          size,
+          rotation: Math.random() * Math.PI,
+          spin: (Math.random() - 0.5) * 14,
+          life,
+          maxLife: life,
+          alphaScale: 0.82 + Math.random() * 0.18,
+          color,
+        })
+      }
+      for (let index = 0; index < 4; index += 1) {
+        const size = Math.max(3, cell * (0.28 + Math.random() * 0.2))
+        const life = 0.5 + Math.random() * 0.35
+        particles.push({
+          x: centerX + (Math.random() - 0.5) * cell * 0.7,
+          y: centerY + (Math.random() - 0.5) * cell * 0.7,
+          vx: (Math.random() - 0.5) * cell * 2.2,
+          vy: -cell * (0.3 + Math.random() * 0.8),
+          size,
+          rotation: Math.random() * Math.PI,
+          spin: (Math.random() - 0.5) * 4,
+          life,
+          maxLife: life,
+          alphaScale: 0.18 + Math.random() * 0.16,
+          color,
+        })
+      }
+    }
+    if (particles.length > 900) particles.splice(0, particles.length - 900)
+    startSandLoop()
+  }
+
   useEffect(() => {
     saveHighScore(state.highScore)
   }, [state.highScore])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const wrap = canvas?.parentElement
+    if (canvas === null || wrap === null || wrap === undefined) return
+    const measure = (): void => {
+      const rect = wrap.getBoundingClientRect()
+      const dpr = Math.max(1, window.devicePixelRatio || 1)
+      sandDprRef.current = dpr
+      canvas.width = Math.max(1, Math.round(rect.width * dpr))
+      canvas.height = Math.max(1, Math.round(rect.height * dpr))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(wrap)
+    return () => observer.disconnect()
+  }, [displayCell, fullscreen])
+
+  const lastLock = state.lastLock
+  useEffect(() => {
+    if (lastLock !== null) spawnSand(lastLock)
+    // spawnSand reads the current geometry and theme; only a new lock should spawn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastLock])
+
+  useEffect(() => {
+    return () => {
+      if (sandFrameRef.current !== null) cancelAnimationFrame(sandFrameRef.current)
+      sandFrameRef.current = null
+      particlesRef.current = []
+    }
+  }, [])
+
+  useEffect(() => {
+    const onFocusShortcut = (event: KeyboardEvent): void => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      if (event.code !== 'KeyG' && event.key.toLowerCase() !== 'g') return
+      const modal = document.querySelector('[role="dialog"][aria-modal="true"]')
+      if (modal !== null && !modal.closest('[data-token-tetris]')) return
+      event.preventDefault()
+      panelRef.current?.focus({ preventScroll: true })
+    }
+    window.addEventListener('keydown', onFocusShortcut)
+    return () => window.removeEventListener('keydown', onFocusShortcut)
+  }, [])
+
+  useEffect(() => {
+    const panel = panelRef.current
+    if (panel === null) return
+    const pauseIfPlaying = (): void => {
+      if (stateRef.current.status === 'playing') dispatch({ type: 'toggle-pause' })
+    }
+    const onFocusOut = (event: FocusEvent): void => {
+      const next = event.relatedTarget
+      if (next instanceof Node && panel.contains(next)) return
+      pauseIfPlaying()
+    }
+    const onVisibilityChange = (): void => {
+      if (document.hidden) pauseIfPlaying()
+    }
+    panel.addEventListener('focusout', onFocusOut)
+    window.addEventListener('blur', pauseIfPlaying)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      panel.removeEventListener('focusout', onFocusOut)
+      window.removeEventListener('blur', pauseIfPlaying)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [])
 
   useLayoutEffect(() => {
     if (!fullscreen) {
@@ -636,9 +830,6 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
             <span className="tt-dot" aria-hidden="true" />
             <span className="tt-title">{t('title')}</span>
           </span>
-          <span className="tt-rate" data-hot={tokens > 0}>
-            {t('tokensPerSecond', { rate: Math.round(tokens) })}
-          </span>
           <button
             type="button"
             className="tt-icon"
@@ -672,6 +863,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
                 )),
               )}
             </div>
+            <canvas ref={canvasRef} className="tt-sand" aria-hidden="true" />
 
             {state.status === 'paused' && (
               <div className="tt-modal" role="status">
@@ -773,8 +965,11 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
           <div className="tt-bar" aria-hidden="true">
             <span className="tt-bar-fill" style={{ width: `${String(Math.round(ratePercent))}%` }} />
           </div>
-          <span className="tt-hint" title={t('hint.full')} aria-label={t('hint.full')}>
-            {t('hint')}
+          <span className="tt-rate" data-hot={tokens > 0}>
+            {t('tokensPerSecond', { rate: Math.round(tokens) })}
+          </span>
+          <span className="tt-kbd" title={t('hint.full')}>
+            {t('focus.shortcut')}
           </span>
         </footer>
 

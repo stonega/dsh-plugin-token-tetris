@@ -51,6 +51,8 @@ const almost = {
 const cleared = reduceGame(almost as any, { type: 'hard-drop' })
 assert.equal(cleared.lines, 1)
 assert.equal(cleared.score, 100)
+assert.equal(cleared.lastLock?.kind, 'O')
+assert.equal(cleared.lastLock?.cells.length, 4)
 assert.equal(cleared.board[BOARD_HEIGHT - 1]?.[2], null)
 assert.equal(cleared.board[BOARD_HEIGHT - 1]?.[0], 'O')
 
