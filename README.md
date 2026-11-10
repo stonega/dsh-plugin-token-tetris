@@ -19,7 +19,7 @@
   - `≥ 53 tok/s` → 95 ms/格（下限）
 - **落点锁延迟**：方块触底后有 260ms 的锁延迟，期间仍可左右移动/旋转；左右键带 165ms DAS + 45ms 自动重复，因此高速下落时也能调整位置。
 - **锁定沙化**：方块锁定时，锁定格会迸出彩色沙粒；沙粒受重力下落、旋转并淡出，看起来像方块碎成沙子。
-- **失焦自动暂停**：游戏面板失去焦点、窗口 blur 或标签页隐藏时自动暂停；重新点击面板或按 `P` 继续。
+- **自动聚焦 / 失焦暂停**：面板出现时自动获取焦点；面板失去焦点、窗口 blur 或标签页隐藏时自动暂停；重新点击面板或按 `P` 继续。
 - **主题**：面板、文字、边框、阴影、按钮全部使用 `--dsw-*` 语义 token；深色模式通过 `body[data-ds-dark-theme]` 自动切换。
 - **不阻塞对话**：注册在 `shell.overlay`（frame 级浮动层）。浮层本身是 click-through 的，只有游戏面板接收指针事件。
 - **速率显示**：底部进度条右侧显示当前 tok/s 与 `Alt+G` 快捷键提示。
@@ -35,14 +35,14 @@
 发布到 npm 后：
 
 ```bash
-dsh plugin --profile web add dsh-tetris-plugin
+dsh plugin --profile web add dsh-plugin-token-tetris
 # 或者：npm pack 后安装本地 tarball
-dsh plugin --profile web add ./dsh-tetris-plugin-0.1.0.tgz
+dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.0.tgz
 # 或者：从源码目录 link
 dsh plugin --profile web add /home/stone/Web/dsh-tetris-plugin
 ```
 
-安装后 DSH 会读取包里的 [cordis.patch.yml](cordis.patch.yml)，插入 `token-tetris` 这一行；行里的 `name: dsh-tetris-plugin` 由 Node 从 profile 的 `node_modules` 解析，浏览器半则通过 `dsh.client` 的 `./client` export 提供。
+安装后 DSH 会读取包里的 [cordis.patch.yml](cordis.patch.yml)，插入 `token-tetris` 这一行；行里的 `name: dsh-plugin-token-tetris` 由 Node 从 profile 的 `node_modules` 解析，浏览器半则通过 `dsh.client` 的 `./client` export 提供。
 
 > 当前环境是通过 profile 的用户 patch 以绝对路径安装的。若要切换到 npm/link bundle，请先从 [cordis.patch.yml](/home/stone/.dsh/profiles/web/cordis.patch.yml) 删除手写的 `token-tetris` 条目，否则用户层会覆盖 bundle 行。
 
@@ -69,10 +69,10 @@ node scripts/build.mjs        # 需要 Bun
 
 ## 发布到 npm
 
-包名 `dsh-tetris-plugin` 在编写时未被占用；发布前先确认：
+包名 `dsh-plugin-token-tetris` 在编写时未被占用；发布前先确认：
 
 ```bash
-npm view dsh-tetris-plugin version
+npm view dsh-plugin-token-tetris version
 # npm ERR! 404 ... — 表示可用
 ```
 

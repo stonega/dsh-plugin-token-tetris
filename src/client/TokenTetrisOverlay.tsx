@@ -411,6 +411,17 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   useEffect(() => {
     const panel = panelRef.current
     if (panel === null) return
+    const frame = requestAnimationFrame(() => {
+      const modal = document.querySelector('[role="dialog"][aria-modal="true"]')
+      if (modal !== null && !modal.closest('[data-token-tetris]')) return
+      panel.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  useEffect(() => {
+    const panel = panelRef.current
+    if (panel === null) return
     const pauseIfPlaying = (): void => {
       if (stateRef.current.status === 'playing') dispatch({ type: 'toggle-pause' })
     }

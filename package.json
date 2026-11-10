@@ -1,5 +1,5 @@
 {
-  "name": "dsh-tetris-plugin",
+  "name": "dsh-plugin-token-tetris",
   "version": "0.1.0",
   "description": "Token-rate-driven Tetris overlay for the DeepSeek Harness Web GUI",
   "author": "stonega",

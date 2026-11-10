@@ -8,7 +8,7 @@
  * state, route, or model-facing surface.
  */
 
-export const name = 'dsh-tetris-plugin'
+export const name = 'dsh-plugin-token-tetris'
 
 export function apply() {
   // Nothing to install on the Host. The browser half registers the overlay.

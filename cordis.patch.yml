@@ -6,4 +6,4 @@
 # `./client` browser bundle through `dsh.client`.
 - insert:
     - id: token-tetris
-      name: dsh-tetris-plugin
+      name: dsh-plugin-token-tetris

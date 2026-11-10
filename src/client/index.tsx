@@ -35,7 +35,7 @@ interface ClientContext {
   effect(callback: () => (() => void) | void, label?: string): void
 }
 
-export const name = 'dsh-tetris-plugin'
+export const name = 'dsh-plugin-token-tetris'
 export const inject = ['slots', 'sessions', 'locale']
 
 export function apply(ctx: ClientContext): void {
