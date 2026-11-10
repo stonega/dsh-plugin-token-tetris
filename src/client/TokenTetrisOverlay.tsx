@@ -400,55 +400,18 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   }, [])
 
   useEffect(() => {
-    let lastArrow: { key: string; at: number } | null = null
-    const focusGame = (event: KeyboardEvent): void => {
+    const onFocusShortcut = (event: KeyboardEvent): void => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      if (event.code !== 'KeyG' && event.key.toLowerCase() !== 'g') return
       const panel = panelRef.current
-      if (panel === null || panel.contains(document.activeElement)) return
+      if (panel === null) return
       const modal = document.querySelector('[role="dialog"][aria-modal="true"]')
       if (modal !== null && !modal.closest('[data-token-tetris]')) return
       event.preventDefault()
       panel.focus({ preventScroll: true })
     }
-    const onFocusShortcut = (event: KeyboardEvent): void => {
-      if (event.defaultPrevented) return
-      const panel = panelRef.current
-      if (panel === null) return
-      const altOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
-      if (altOnly && (event.code === 'KeyG' || event.key.toLowerCase() === 'g')) {
-        lastArrow = null
-        focusGame(event)
-        return
-      }
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-        lastArrow = null
-        return
-      }
-      if (event.repeat) return
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
-        lastArrow = null
-        return
-      }
-      if (panel.contains(document.activeElement)) {
-        lastArrow = null
-        return
-      }
-      const now = performance.now()
-      if (lastArrow !== null && lastArrow.key === event.key && now - lastArrow.at <= 400) {
-        lastArrow = null
-        focusGame(event)
-        return
-      }
-      lastArrow = { key: event.key, at: now }
-    }
-    const onPointerDown = (): void => {
-      lastArrow = null
-    }
     window.addEventListener('keydown', onFocusShortcut, true)
-    window.addEventListener('pointerdown', onPointerDown, true)
-    return () => {
-      window.removeEventListener('keydown', onFocusShortcut, true)
-      window.removeEventListener('pointerdown', onPointerDown, true)
-    }
+    return () => window.removeEventListener('keydown', onFocusShortcut, true)
   }, [])
 
   useEffect(() => {
