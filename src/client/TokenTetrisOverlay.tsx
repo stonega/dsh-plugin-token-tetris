@@ -497,15 +497,28 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       autoFocusRef.current = false
       pauseIfPlaying()
     }
+    let focusFrame: number | null = null
+    const onFocusIn = (event: FocusEvent): void => {
+      if (cancelled || userLeft || !autoFocusRef.current) return
+      if (event.target instanceof Node && panel.contains(event.target)) return
+      if (focusFrame !== null) return
+      focusFrame = requestAnimationFrame(() => {
+        focusFrame = null
+        tryFocus()
+      })
+    }
     window.addEventListener('pointerdown', onPointerDown, true)
     window.addEventListener('keydown', onKeyDown, true)
+    document.addEventListener('focusin', onFocusIn, true)
     return () => {
       cancelled = true
       cancelAnimationFrame(frame)
+      if (focusFrame !== null) cancelAnimationFrame(focusFrame)
       for (const timer of timers) clearTimeout(timer)
       clearTimeout(settle)
       window.removeEventListener('pointerdown', onPointerDown, true)
       window.removeEventListener('keydown', onKeyDown, true)
+      document.removeEventListener('focusin', onFocusIn, true)
     }
   }, [])
 
