@@ -201,6 +201,8 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const [fullscreenRect, setFullscreenRect] = useState<ScreenRect | null>(null)
   const [dragging, setDragging] = useState(false)
   const [resizing, setResizing] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [focusHintReady, setFocusHintReady] = useState(false)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLElement>(null)
@@ -254,6 +256,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const grid = useMemo(() => renderGrid(state), [state])
   const next = useMemo(() => previewGrid(state.queue[0] ?? 'I'), [state.queue])
   const ratePercent = Math.min(100, (tokens / 80) * 100)
+  const showFocusHint = !focused && focusHintReady
 
   const resolvePieceColor = (kind: PieceKind): string => {
     const panel = panelRef.current
@@ -397,16 +400,55 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   }, [])
 
   useEffect(() => {
-    const onFocusShortcut = (event: KeyboardEvent): void => {
-      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
-      if (event.code !== 'KeyG' && event.key.toLowerCase() !== 'g') return
+    let lastArrow: { key: string; at: number } | null = null
+    const focusGame = (event: KeyboardEvent): void => {
+      const panel = panelRef.current
+      if (panel === null || panel.contains(document.activeElement)) return
       const modal = document.querySelector('[role="dialog"][aria-modal="true"]')
       if (modal !== null && !modal.closest('[data-token-tetris]')) return
       event.preventDefault()
-      panelRef.current?.focus({ preventScroll: true })
+      panel.focus({ preventScroll: true })
     }
-    window.addEventListener('keydown', onFocusShortcut)
-    return () => window.removeEventListener('keydown', onFocusShortcut)
+    const onFocusShortcut = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented) return
+      const panel = panelRef.current
+      if (panel === null) return
+      const altOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
+      if (altOnly && (event.code === 'KeyG' || event.key.toLowerCase() === 'g')) {
+        lastArrow = null
+        focusGame(event)
+        return
+      }
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        lastArrow = null
+        return
+      }
+      if (event.repeat) return
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+        lastArrow = null
+        return
+      }
+      if (panel.contains(document.activeElement)) {
+        lastArrow = null
+        return
+      }
+      const now = performance.now()
+      if (lastArrow !== null && lastArrow.key === event.key && now - lastArrow.at <= 400) {
+        lastArrow = null
+        focusGame(event)
+        return
+      }
+      lastArrow = { key: event.key, at: now }
+    }
+    const onPointerDown = (): void => {
+      lastArrow = null
+    }
+    window.addEventListener('keydown', onFocusShortcut, true)
+    window.addEventListener('pointerdown', onPointerDown, true)
+    return () => {
+      window.removeEventListener('keydown', onFocusShortcut, true)
+      window.removeEventListener('pointerdown', onPointerDown, true)
+    }
   }, [])
 
   useEffect(() => {
@@ -424,27 +466,46 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       if (panel.contains(document.activeElement)) return
       panel.focus({ preventScroll: true })
     }
+    const pauseIfPlaying = (): void => {
+      if (stateRef.current.status === 'playing') dispatch({ type: 'toggle-pause' })
+    }
     const frame = requestAnimationFrame(tryFocus)
     const timers = [
-      window.setTimeout(tryFocus, 150),
-      window.setTimeout(tryFocus, 400),
-      window.setTimeout(tryFocus, 700),
+      window.setTimeout(tryFocus, 120),
+      window.setTimeout(tryFocus, 300),
+      window.setTimeout(tryFocus, 600),
+      window.setTimeout(tryFocus, 1000),
+      window.setTimeout(tryFocus, 1600),
+      window.setTimeout(tryFocus, 2400),
     ]
     const settle = window.setTimeout(() => {
       autoFocusRef.current = false
-    }, 750)
+    }, 2500)
     const onPointerDown = (event: PointerEvent): void => {
       if (event.target instanceof Node && panel.contains(event.target)) return
+      const hadFocus = panel.contains(document.activeElement)
       userLeft = true
       autoFocusRef.current = false
+      if (!hadFocus) pauseIfPlaying()
+    }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') return
+      const target = event.target
+      if (target instanceof Node && panel.contains(target)) return
+      userLeft = true
+      autoFocusRef.current = false
+      pauseIfPlaying()
     }
     window.addEventListener('pointerdown', onPointerDown, true)
+    window.addEventListener('keydown', onKeyDown, true)
     return () => {
       cancelled = true
       cancelAnimationFrame(frame)
       for (const timer of timers) clearTimeout(timer)
       clearTimeout(settle)
       window.removeEventListener('pointerdown', onPointerDown, true)
+      window.removeEventListener('keydown', onKeyDown, true)
     }
   }, [])
 
@@ -454,21 +515,45 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
     const pauseIfPlaying = (): void => {
       if (stateRef.current.status === 'playing') dispatch({ type: 'toggle-pause' })
     }
+    const onFocusIn = (): void => {
+      setFocused(true)
+    }
     const onFocusOut = (event: FocusEvent): void => {
-      if (autoFocusRef.current) return
       const next = event.relatedTarget
       if (next instanceof Node && panel.contains(next)) return
+      setFocused(false)
+      if (autoFocusRef.current) return
       pauseIfPlaying()
     }
-    const onVisibilityChange = (): void => {
-      if (document.hidden) pauseIfPlaying()
+    const onWindowBlur = (): void => {
+      setFocused(false)
+      pauseIfPlaying()
     }
+    const onWindowFocus = (): void => {
+      if (panel.contains(document.activeElement)) setFocused(true)
+    }
+    const onVisibilityChange = (): void => {
+      if (document.hidden) {
+        setFocused(false)
+        pauseIfPlaying()
+      } else if (panel.contains(document.activeElement)) {
+        setFocused(true)
+      }
+    }
+    const hintTimer = window.setTimeout(() => {
+      setFocusHintReady(true)
+    }, 2600)
+    panel.addEventListener('focusin', onFocusIn)
     panel.addEventListener('focusout', onFocusOut)
-    window.addEventListener('blur', pauseIfPlaying)
+    window.addEventListener('blur', onWindowBlur)
+    window.addEventListener('focus', onWindowFocus)
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
+      clearTimeout(hintTimer)
+      panel.removeEventListener('focusin', onFocusIn)
       panel.removeEventListener('focusout', onFocusOut)
-      window.removeEventListener('blur', pauseIfPlaying)
+      window.removeEventListener('blur', onWindowBlur)
+      window.removeEventListener('focus', onWindowFocus)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [])
@@ -905,11 +990,27 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
               )}
             </div>
             <canvas ref={canvasRef} className="tt-sand" aria-hidden="true" />
+            {showFocusHint && (
+              <button
+                type="button"
+                className="tt-focus-hint"
+                onPointerDown={(event) => {
+                  event.preventDefault()
+                  panelRef.current?.focus({ preventScroll: true })
+                }}
+                onClick={() => panelRef.current?.focus({ preventScroll: true })}
+              >
+                <span className="tt-focus-hint-title">{t('focus.hint.title')}</span>
+                <span className="tt-focus-hint-body">{t('focus.hint.body')}</span>
+              </button>
+            )}
 
             {state.status === 'paused' && (
               <div className="tt-modal" role="status">
                 <div className="tt-modal-title">{t('paused')}</div>
-                <div className="tt-modal-sub">{t('paused.hint')}</div>
+                <div className="tt-modal-sub">
+                {focused ? t('paused.hint') : t('focus.paused.hint')}
+              </div>
                 <button
                   type="button"
                   className="tt-modal-btn"
@@ -1009,7 +1110,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
           <span className="tt-rate" data-hot={tokens > 0}>
             {t('tokensPerSecond', { rate: Math.round(tokens) })}
           </span>
-          <span className="tt-kbd" title={t('hint.full')}>
+          <span className="tt-kbd" data-hot={!focused} title={t('hint.full')}>
             {t('focus.shortcut')}
           </span>
         </footer>
