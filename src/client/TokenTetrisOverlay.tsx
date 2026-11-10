@@ -208,6 +208,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const particlesRef = useRef<SandParticle[]>([])
   const sandFrameRef = useRef<number | null>(null)
   const sandDprRef = useRef(1)
+  const autoFocusRef = useRef(true)
   const stateRef = useRef(state)
   stateRef.current = state
   const cellRef = useRef(cell)
@@ -411,12 +412,40 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   useEffect(() => {
     const panel = panelRef.current
     if (panel === null) return
-    const frame = requestAnimationFrame(() => {
+    let cancelled = false
+    let userLeft = false
+    const externalModalOpen = (): boolean => {
       const modal = document.querySelector('[role="dialog"][aria-modal="true"]')
-      if (modal !== null && !modal.closest('[data-token-tetris]')) return
+      return modal !== null && modal.closest('[data-token-tetris]') === null
+    }
+    const tryFocus = (): void => {
+      if (cancelled || userLeft) return
+      if (externalModalOpen()) return
+      if (panel.contains(document.activeElement)) return
       panel.focus({ preventScroll: true })
-    })
-    return () => cancelAnimationFrame(frame)
+    }
+    const frame = requestAnimationFrame(tryFocus)
+    const timers = [
+      window.setTimeout(tryFocus, 150),
+      window.setTimeout(tryFocus, 400),
+      window.setTimeout(tryFocus, 700),
+    ]
+    const settle = window.setTimeout(() => {
+      autoFocusRef.current = false
+    }, 750)
+    const onPointerDown = (event: PointerEvent): void => {
+      if (event.target instanceof Node && panel.contains(event.target)) return
+      userLeft = true
+      autoFocusRef.current = false
+    }
+    window.addEventListener('pointerdown', onPointerDown, true)
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+      for (const timer of timers) clearTimeout(timer)
+      clearTimeout(settle)
+      window.removeEventListener('pointerdown', onPointerDown, true)
+    }
   }, [])
 
   useEffect(() => {
@@ -426,6 +455,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       if (stateRef.current.status === 'playing') dispatch({ type: 'toggle-pause' })
     }
     const onFocusOut = (event: FocusEvent): void => {
+      if (autoFocusRef.current) return
       const next = event.relatedTarget
       if (next instanceof Node && panel.contains(next)) return
       pauseIfPlaying()
