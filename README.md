@@ -98,7 +98,16 @@ npm publish --access public
 
 > npm 发布是公开且不可撤销的；建议先 `npm publish --dry-run`。启用 2FA 的账号需要 `--otp`。
 
-如果希望出现在 DSH 的 **Discover / 插件市场**，还需要被某个 market index 收录。当前文档定义的是 index 格式，官方收录流程没有公开；可以先把 index JSON 放在自己的仓库，用户在 Plugins 页面添加该 index URL。
+## Discover / 插件市场
+
+插件市场索引已经放在仓库里：
+
+- 文件：[market/index.json](https://github.com/stonega/dsh-plugin-token-tetris/blob/main/market/index.json)
+- 直接索引地址：`https://raw.githubusercontent.com/stonega/dsh-plugin-token-tetris/main/market/index.json`
+
+在 DSH 的 **Plugins → Discover** 中添加这个 index URL，即可搜索并安装 `dsh-plugin-token-tetris`。索引使用格式 1，已通过 `@deepseek-ai/dsh-plugin-market-index` 的官方校验器验证。
+
+当前这是**自托管索引**，还没有被官方市场索引收录；要出现在官方 Discover 列表里，仍需要官方 index 维护方收录。发布新版本时，在 [market/index.json](https://github.com/stonega/dsh-plugin-token-tetris/blob/main/market/index.json) 的 `versions` 中加入对应的 `version`、`publishTimestamp` 和 `source`，然后提交即可。
 
 ## 结构
 
@@ -112,6 +121,7 @@ src/client/token-rate.ts      Session 事件 → 滚动 token/s 估算
 src/client/styles.ts          主题化 CSS（--dsw-*）
 src/client/locale.ts          en / zh 字典
 cordis.patch.yml              DSH bundle 层（插入 token-tetris 行）
+market/index.json             Discover 市场索引（格式 1，自托管）
 scripts/build.mjs             Bun 打包 + __ModuleLoader__ 包装
 tests/                        纯逻辑与速率源测试
 harness/                      独立 UI 预览页（开发用）

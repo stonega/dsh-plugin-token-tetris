@@ -1,0 +1,89 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Token Tetris plugins",
+    "zh": "Token Tetris 插件"
+  },
+  "description": {
+    "en": "A market index for the Token Tetris DSH overlay.",
+    "zh": "Token Tetris DSH 浮层插件的市场索引。"
+  },
+  "metadata": {
+    "categories": {
+      "games": {
+        "title": {
+          "en": "Games",
+          "zh": "游戏"
+        }
+      }
+    },
+    "labels": {
+      "overlay": {
+        "title": {
+          "en": "Overlay",
+          "zh": "浮层"
+        }
+      },
+      "realtime": {
+        "title": {
+          "en": "Realtime",
+          "zh": "实时"
+        }
+      },
+      "theme-aware": {
+        "title": {
+          "en": "Theme-aware",
+          "zh": "跟随主题"
+        }
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "dsh-plugin-token-tetris",
+      "title": {
+        "en": "Token Tetris",
+        "zh": "Token Tetris"
+      },
+      "description": {
+        "en": "Play Tetris in the DSH Web GUI while the agent is working. Gravity follows the live assistant token rate.",
+        "zh": "当 Agent 工作时，在 DSH Web GUI 中玩俄罗斯方块。方块重力跟随助手实时的 token 速率。"
+      },
+      "icon": "https://raw.githubusercontent.com/stonega/dsh-plugin-token-tetris/main/docs/token-tetris-light.png",
+      "author": "stonega",
+      "homepage": "https://github.com/stonega/dsh-plugin-token-tetris#readme",
+      "repository": {
+        "url": "https://github.com/stonega/dsh-plugin-token-tetris"
+      },
+      "metadata": {
+        "category": "games",
+        "keywords": [
+          "dsh",
+          "deepseek-harness",
+          "plugin",
+          "tetris",
+          "game",
+          "overlay",
+          "token-rate"
+        ],
+        "labels": [
+          "overlay",
+          "realtime",
+          "theme-aware"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1794281038,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.0 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}
