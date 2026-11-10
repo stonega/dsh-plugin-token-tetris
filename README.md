@@ -37,7 +37,7 @@
 ```bash
 dsh plugin --profile web add dsh-plugin-token-tetris
 # 或者：npm pack 后安装本地 tarball
-dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.1.tgz
+dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.2.tgz
 # 或者：从源码目录 link
 dsh plugin --profile web add /home/stone/Web/dsh-tetris-plugin
 ```

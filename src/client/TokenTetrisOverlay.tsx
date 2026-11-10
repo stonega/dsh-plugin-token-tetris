@@ -256,7 +256,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const grid = useMemo(() => renderGrid(state), [state])
   const next = useMemo(() => previewGrid(state.queue[0] ?? 'I'), [state.queue])
   const ratePercent = Math.min(100, (tokens / 80) * 100)
-  const showFocusHint = !focused && focusHintReady
+  const showFocusHint = !focused && focusHintReady && state.status === 'playing'
 
   const resolvePieceColor = (kind: PieceKind): string => {
     const panel = panelRef.current
@@ -1021,9 +1021,6 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
             {state.status === 'paused' && (
               <div className="tt-modal" role="status">
                 <div className="tt-modal-title">{t('paused')}</div>
-                <div className="tt-modal-sub">
-                {focused ? t('paused.hint') : t('focus.paused.hint')}
-              </div>
                 <button
                   type="button"
                   className="tt-modal-btn"
