@@ -53,10 +53,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stonega/dsh-tetris-plugin.git"
+    "url": "git+https://github.com/stonega/dsh-plugin-token-tetris.git"
   },
-  "homepage": "https://github.com/stonega/dsh-tetris-plugin#readme",
+  "homepage": "https://github.com/stonega/dsh-plugin-token-tetris#readme",
   "bugs": {
-    "url": "https://github.com/stonega/dsh-tetris-plugin/issues"
+    "url": "https://github.com/stonega/dsh-plugin-token-tetris/issues"
   }
 }
