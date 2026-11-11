@@ -45,6 +45,8 @@ export interface GameState {
   readonly lockTime: number
   /** The most recent lock, or null before the first piece settles. */
   readonly lastLock: LockEvent | null
+  /** Monotonic game identity; restarts increment it so per-game stats reset. */
+  readonly gameId: number
 }
 
 export type GameAction =
@@ -278,7 +280,7 @@ function stepDown(state: GameState, manual: boolean, dt: number): GameState {
   return { ...state, lockTime }
 }
 
-export function createInitialState(highScore = 0): GameState {
+export function createInitialState(highScore = 0, gameId = 1): GameState {
   const queue = fillQueue([], 5)
   const kind = queue[0] ?? 'I'
   return {
@@ -292,6 +294,7 @@ export function createInitialState(highScore = 0): GameState {
     highScore: Math.max(0, highScore),
     lockTime: 0,
     lastLock: null,
+    gameId,
   }
 }
 
@@ -341,7 +344,7 @@ export function reduceGame(state: GameState, action: GameAction): GameState {
       if (state.status === 'over') return state
       return { ...state, status: state.status === 'paused' ? 'playing' : 'paused' }
     case 'restart':
-      return createInitialState(state.highScore)
+      return createInitialState(state.highScore, state.gameId + 1)
   }
 }
 

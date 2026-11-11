@@ -223,6 +223,10 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const resizeRef = useRef<ResizeState | null>(null)
 
   const tokens = Math.max(0, tokensPerSecond)
+  const rateRef = useRef(tokens)
+  rateRef.current = tokens
+  const rateStatsRef = useRef({ elapsed: 0, weighted: 0, lastAt: performance.now() })
+  const [averageTokens, setAverageTokens] = useState(0)
   const interval = gravityInterval(state.level, tokens)
   const intervalRef = useRef(interval)
   intervalRef.current = interval
@@ -366,6 +370,28 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   useEffect(() => {
     saveHighScore(state.highScore)
   }, [state.highScore])
+
+  useEffect(() => {
+    const now = performance.now()
+    rateStatsRef.current = { elapsed: 0, weighted: 0, lastAt: now }
+    setAverageTokens(0)
+  }, [state.gameId])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const now = performance.now()
+      const stats = rateStatsRef.current
+      const dt = Math.max(0, (now - stats.lastAt) / 1000)
+      stats.lastAt = now
+      if (stateRef.current.status === 'playing') {
+        stats.elapsed += dt
+        stats.weighted += rateRef.current * dt
+      }
+      const nextAverage = stats.elapsed > 0 ? stats.weighted / stats.elapsed : 0
+      setAverageTokens((current) => (Math.abs(current - nextAverage) < 0.05 ? current : nextAverage))
+    }, 500)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -998,6 +1024,9 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
               <div className="tt-modal" role="status">
                 <div className="tt-modal-title">{t('gameOver')}</div>
                 <div className="tt-modal-sub">{t('finalScore', { score: state.score })}</div>
+                <div className="tt-modal-sub">
+                  {t('finalAverage', { rate: Math.round(averageTokens) })}
+                </div>
                 <button type="button" className="tt-modal-btn" onClick={() => act({ type: 'restart' })}>
                   {t('restart')}
                 </button>
@@ -1024,6 +1053,10 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
 
             <div className="tt-stats">
               <Stat label={t('stat.score')} value={formatNumber(state.score)} />
+              <Stat
+                label={t('stat.avg')}
+                value={t('tokensPerSecond', { rate: Math.round(averageTokens) })}
+              />
               <Stat label={t('stat.lines')} value={formatNumber(state.lines)} />
               <Stat label={t('stat.level')} value={formatNumber(state.level)} />
               <Stat label={t('stat.best')} value={formatNumber(state.highScore)} />
