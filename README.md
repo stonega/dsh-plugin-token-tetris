@@ -8,6 +8,8 @@
 
 ![Token Tetris fullscreen](docs/token-tetris-fullscreen.png)
 
+![Token Tetris line-clear sand burst](docs/token-tetris-clear.png)
+
 > 截图来自 `harness/` 的独立预览页；它复用 DSH 自身的 `--dsw-*` 主题变量，因此与真实界面的配色、字体、圆角和阴影一致。
 
 ## 行为
@@ -20,6 +22,7 @@
 - **落点锁延迟**：方块触底后有 260ms 的锁延迟，期间仍可左右移动/旋转；左右键带 165ms DAS + 45ms 自动重复，因此高速下落时也能调整位置。
 - **锁定沙化**：方块锁定时，锁定格会迸出彩色沙粒；沙粒受重力下落、旋转并淡出，看起来像方块碎成沙子。
 - **平均 token 速度**：侧栏 `AVG` 显示本局按实际游玩时间加权的平均 tok/s；Game Over 弹窗同时显示最终得分与平均速率。
+- **消行沙瀑**：整行消除时，行内所有方块化为大量彩色沙粒，同时出现横向闪光和 `SINGLE` / `DOUBLE` / `TRIPLE` / `TETRIS` 提示。
 - **自动聚焦 / 失焦暂停**：面板出现时自动获取焦点，并在约 2.5s 内多次重试，避免首次加载或发送消息后聊天输入框抢回焦点；面板失去焦点、窗口 blur 或标签页隐藏时自动暂停；未聚焦时面板顶部会显示明显的操作提示。重新点击面板或按 `P` 继续。
 - **主题**：面板、文字、边框、阴影、按钮全部使用 `--dsw-*` 语义 token；深色模式通过 `body[data-ds-dark-theme]` 自动切换。
 - **不阻塞对话**：注册在 `shell.overlay`（frame 级浮动层）。浮层本身是 click-through 的，只有游戏面板接收指针事件。
@@ -38,7 +41,7 @@
 ```bash
 dsh plugin --profile web add dsh-plugin-token-tetris
 # 或者：npm pack 后安装本地 tarball
-dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.3.tgz
+dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.4.tgz
 # 或者：从源码目录 link
 dsh plugin --profile web add /home/stone/Web/dsh-tetris-plugin
 ```

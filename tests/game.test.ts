@@ -54,6 +54,8 @@ assert.equal(cleared.lines, 1)
 assert.equal(cleared.score, 100)
 assert.equal(cleared.lastLock?.kind, 'O')
 assert.equal(cleared.lastLock?.cells.length, 4)
+assert.equal(cleared.lastClear?.count, 1)
+assert.equal(cleared.lastClear?.cells.length, 10)
 assert.equal(cleared.board[BOARD_HEIGHT - 1]?.[2], null)
 assert.equal(cleared.board[BOARD_HEIGHT - 1]?.[0], 'O')
 

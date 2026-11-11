@@ -234,6 +234,32 @@ body[data-ds-dark-theme] .tt-panel {
   pointer-events: none;
 }
 
+.tt-clear-label {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--dsw-alias-state-warn-primary);
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 55%, transparent),
+    0 0 22px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 28%, transparent);
+  animation: tt-clear-pop 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes tt-clear-pop {
+  0% { opacity: 0; transform: scale(0.68); }
+  15% { opacity: 1; transform: scale(1.1); }
+  58% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+
 .tt-side {
   display: flex;
   flex: 0 0 var(--tt-side);
@@ -489,6 +515,10 @@ body[data-ds-dark-theme] .tt-panel {
   .tt-bar-fill {
     transition: none;
   }
+
+  .tt-clear-label {
+    animation: none;
+  }
 }
 
 /* ---- window management ---- */
@@ -614,6 +644,11 @@ body[data-ds-dark-theme] .tt-panel {
 .tt-root[data-fullscreen='true'] .tt-kbd {
   font-size: 11px;
   line-height: 18px;
+}
+
+.tt-root[data-fullscreen='true'] .tt-clear-label {
+  font-size: 24px;
+  letter-spacing: 0.22em;
 }
 
 .tt-root[data-fullscreen='true'] .tt-bar {

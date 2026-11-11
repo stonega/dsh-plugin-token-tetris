@@ -16,6 +16,7 @@ import {
   reduceGame,
   renderGrid,
   saveHighScore,
+  type ClearEvent,
   type GameAction,
   type LockEvent,
   type PieceKind,
@@ -81,6 +82,16 @@ interface SandParticle {
   life: number
   maxLife: number
   alphaScale: number
+  color: string
+}
+
+interface SandFlash {
+  x: number
+  y: number
+  width: number
+  height: number
+  life: number
+  maxLife: number
   color: string
 }
 
@@ -203,11 +214,13 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   const [resizing, setResizing] = useState(false)
   const [focused, setFocused] = useState(false)
   const [focusHintReady, setFocusHintReady] = useState(false)
+  const [clearLabel, setClearLabel] = useState<{ id: number; count: number } | null>(null)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<SandParticle[]>([])
+  const flashesRef = useRef<SandFlash[]>([])
   const sandFrameRef = useRef<number | null>(null)
   const sandDprRef = useRef(1)
   const autoFocusRef = useRef(true)
@@ -288,6 +301,24 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       const height = canvas.height / dpr
       context.setTransform(dpr, 0, 0, dpr, 0, 0)
       context.clearRect(0, 0, width, height)
+      const flashes = flashesRef.current
+      for (let index = flashes.length - 1; index >= 0; index -= 1) {
+        const flash = flashes[index]
+        if (flash === undefined) continue
+        flash.life -= dt
+        if (flash.life <= 0) {
+          flashes.splice(index, 1)
+          continue
+        }
+        const alpha = flash.life / flash.maxLife
+        const grow = (1 - alpha) * flash.height
+        context.globalAlpha = alpha * 0.72
+        context.fillStyle = flash.color
+        context.fillRect(flash.x, flash.y - grow / 2, flash.width, flash.height + grow)
+        context.globalAlpha = alpha * 0.3
+        context.fillRect(flash.x, flash.y - grow, flash.width, flash.height + grow * 2)
+      }
+      context.globalAlpha = 1
       const particles = particlesRef.current
       for (let index = particles.length - 1; index >= 0; index -= 1) {
         const particle = particles[index]
@@ -312,7 +343,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
         context.restore()
       }
       context.globalAlpha = 1
-      if (particles.length === 0) return
+      if (particles.length === 0 && flashes.length === 0) return
       sandFrameRef.current = requestAnimationFrame(frame)
     }
     sandFrameRef.current = requestAnimationFrame(frame)
@@ -367,6 +398,86 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
     startSandLoop()
   }
 
+
+  const spawnClearSand = (clear: ClearEvent): void => {
+    const cell = displayCell
+    const step = cell + 1
+    const pad = 5
+    const particles = particlesRef.current
+    const flashes = flashesRef.current
+    const colors = new Map<PieceKind, string>()
+    const colorFor = (kind: PieceKind): string => {
+      const cached = colors.get(kind)
+      if (cached !== undefined) return cached
+      const color = resolvePieceColor(kind)
+      colors.set(kind, color)
+      return color
+    }
+    const rows = new Map<number, Array<{ x: number; kind: PieceKind }>>()
+    for (const cleared of clear.cells) {
+      const row = rows.get(cleared.y)
+      if (row === undefined) rows.set(cleared.y, [{ x: cleared.x, kind: cleared.kind }])
+      else row.push({ x: cleared.x, kind: cleared.kind })
+    }
+    const flashColor = resolvePieceColor('O')
+    for (const [rowY, cells] of rows) {
+      flashes.push({
+        x: pad,
+        y: pad + rowY * step,
+        width: 10 * step - 1,
+        height: cell,
+        life: 0.55,
+        maxLife: 0.55,
+        color: flashColor,
+      })
+      for (const cleared of cells) {
+        const centerX = pad + cleared.x * step + cell / 2
+        const centerY = pad + rowY * step + cell / 2
+        const color = colorFor(cleared.kind)
+        const grains = 24 + Math.floor(Math.random() * 10)
+        for (let index = 0; index < grains; index += 1) {
+          const size = Math.max(1.5, cell * (0.1 + Math.random() * 0.12))
+          const life = 0.95 + Math.random() * 0.65
+          const downward = index % 7 === 0
+          particles.push({
+            x: centerX + (Math.random() - 0.5) * cell,
+            y: centerY + (Math.random() - 0.5) * cell,
+            vx: (cleared.x - 4.5) * cell * (1 + Math.random() * 1.4),
+            vy: downward
+              ? cell * (0.4 + Math.random() * 1.2)
+              : -cell * (1 + Math.random() * 2.8),
+            size,
+            rotation: Math.random() * Math.PI,
+            spin: (Math.random() - 0.5) * 16,
+            life,
+            maxLife: life,
+            alphaScale: 0.78 + Math.random() * 0.22,
+            color,
+          })
+        }
+        for (let index = 0; index < 5; index += 1) {
+          const size = Math.max(3, cell * (0.26 + Math.random() * 0.22))
+          const life = 0.6 + Math.random() * 0.45
+          particles.push({
+            x: centerX + (Math.random() - 0.5) * cell,
+            y: centerY + (Math.random() - 0.5) * cell,
+            vx: (Math.random() - 0.5) * cell * 3,
+            vy: -cell * (0.3 + Math.random() * 1.2),
+            size,
+            rotation: Math.random() * Math.PI,
+            spin: (Math.random() - 0.5) * 5,
+            life,
+            maxLife: life,
+            alphaScale: 0.18 + Math.random() * 0.16,
+            color,
+          })
+        }
+      }
+    }
+    if (particles.length > 1800) particles.splice(0, particles.length - 1800)
+    startSandLoop()
+  }
+
   useEffect(() => {
     saveHighScore(state.highScore)
   }, [state.highScore])
@@ -411,17 +522,39 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   }, [displayCell, fullscreen])
 
   const lastLock = state.lastLock
+  const lastClear = state.lastClear
+  const lastClearIdRef = useRef(0)
   useEffect(() => {
+    lastClearIdRef.current = 0
+  }, [state.gameId])
+
+  useEffect(() => {
+    if (lastClear !== null && lastClear.id !== lastClearIdRef.current) {
+      lastClearIdRef.current = lastClear.id
+      spawnClearSand(lastClear)
+      return
+    }
     if (lastLock !== null) spawnSand(lastLock)
-    // spawnSand reads the current geometry and theme; only a new lock should spawn.
+    // spawn functions read the current geometry and theme; only a new event should spawn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastLock])
+  }, [lastLock, lastClear])
+
+  useEffect(() => {
+    if (lastClear === null) {
+      setClearLabel(null)
+      return
+    }
+    setClearLabel({ id: lastClear.id, count: lastClear.count })
+    const timer = window.setTimeout(() => setClearLabel(null), 1100)
+    return () => clearTimeout(timer)
+  }, [lastClear])
 
   useEffect(() => {
     return () => {
       if (sandFrameRef.current !== null) cancelAnimationFrame(sandFrameRef.current)
       sandFrameRef.current = null
       particlesRef.current = []
+      flashesRef.current = []
     }
   }, [])
 
@@ -992,6 +1125,11 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
               )}
             </div>
             <canvas ref={canvasRef} className="tt-sand" aria-hidden="true" />
+            {clearLabel !== null && (
+              <div key={clearLabel.id} className="tt-clear-label" aria-hidden="true">
+                {t(`clear.${String(Math.min(4, clearLabel.count))}`)}
+              </div>
+            )}
             {showFocusHint && (
               <button
                 type="button"

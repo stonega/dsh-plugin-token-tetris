@@ -32,6 +32,17 @@ export interface LockEvent {
   readonly cells: readonly (readonly [number, number])[]
 }
 
+/** One line-clear event, carrying every removed cell so the UI can dissolve it to sand. */
+export interface ClearEvent {
+  readonly id: number
+  readonly count: number
+  readonly cells: readonly {
+    readonly x: number
+    readonly y: number
+    readonly kind: PieceKind
+  }[]
+}
+
 export interface GameState {
   readonly board: Board
   readonly active: ActivePiece
@@ -45,6 +56,8 @@ export interface GameState {
   readonly lockTime: number
   /** The most recent lock, or null before the first piece settles. */
   readonly lastLock: LockEvent | null
+  /** The most recent line clear, or null before the first clear. */
+  readonly lastClear: ClearEvent | null
   /** Monotonic game identity; restarts increment it so per-game stats reset. */
   readonly gameId: number
 }
@@ -226,8 +239,19 @@ function lockPiece(state: GameState): GameState {
     }
   }
 
-  const kept = board.filter((row) => row.some((cell) => cell === null))
-  const cleared = BOARD_HEIGHT - kept.length
+  const fullRows = new Set<number>()
+  const clearCells: Array<{ x: number; y: number; kind: PieceKind }> = []
+  for (let y = 0; y < BOARD_HEIGHT; y += 1) {
+    const row = board[y]
+    if (row === undefined || row.some((cell) => cell === null)) continue
+    fullRows.add(y)
+    for (let x = 0; x < BOARD_WIDTH; x += 1) {
+      const kind = row[x]
+      if (kind !== null && kind !== undefined) clearCells.push({ x, y, kind })
+    }
+  }
+  const kept = board.filter((_, y) => !fullRows.has(y))
+  const cleared = fullRows.size
   const nextBoard: Board = [
     ...Array.from({ length: cleared }, () => Array<PieceKind | null>(BOARD_WIDTH).fill(null)),
     ...kept,
@@ -259,6 +283,14 @@ function lockPiece(state: GameState): GameState {
             id: (state.lastLock?.id ?? 0) + 1,
             kind: state.active.kind,
             cells: lockedCells,
+          },
+    lastClear:
+      cleared === 0
+        ? state.lastClear
+        : {
+            id: (state.lastClear?.id ?? 0) + 1,
+            count: cleared,
+            cells: clearCells,
           },
   })
 }
@@ -294,6 +326,7 @@ export function createInitialState(highScore = 0, gameId = 1): GameState {
     highScore: Math.max(0, highScore),
     lockTime: 0,
     lastLock: null,
+    lastClear: null,
     gameId,
   }
 }
