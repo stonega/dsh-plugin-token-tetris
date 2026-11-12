@@ -37,6 +37,7 @@ export const EN: Record<string, string> = {
   'aria.fullscreen': 'Enter fullscreen',
   'aria.exitFullscreen': 'Exit fullscreen',
   'aria.drag': 'Drag to move',
+  'aria.dragFullscreen': 'Exit fullscreen to move or resize',
   'aria.resize': 'Resize game',
   'aria.resume': 'Resume game',
   'aria.restart': 'Restart game',

@@ -75,17 +75,29 @@ body[data-ds-dark-theme] .tt-panel {
 
 .tt-grip {
   flex: 0 0 auto;
-  padding: 0 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid transparent;
+  border-radius: 5px;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
-  letter-spacing: -2px;
+  letter-spacing: 0;
   opacity: 0.9;
-  cursor: inherit;
+  cursor: grab;
+}
+
+.tt-grip:hover {
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .tt-head:hover .tt-grip {
   color: var(--dsw-alias-label-secondary);
+  border-color: var(--dsw-alias-border-l2);
 }
 
 .tt-live {
@@ -531,6 +543,12 @@ body[data-ds-dark-theme] .tt-panel {
 
 .tt-root[data-dragging='true'] .tt-head {
   cursor: grabbing;
+}
+
+.tt-root[data-dragging='true'] .tt-grip {
+  color: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-state-business-primary);
 }
 
 .tt-resize {

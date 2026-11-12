@@ -962,20 +962,18 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
     })
   }
 
-  const onHeaderPointerDown = (event: PointerEvent<HTMLElement>): void => {
+  const onHeaderMouseDown = (event: MouseEvent<HTMLElement>): void => {
     if (fullscreenRef.current || event.button !== 0 || dragCleanupRef.current !== null) return
     const target = event.target
     if (target instanceof HTMLElement && target.closest('button') !== null) return
     const root = rootRef.current
     if (root === null) return
     const rect = root.getBoundingClientRect()
-    const pointerId = event.pointerId
     const startX = event.clientX
     const startY = event.clientY
     const startLeft = rect.left
     const startTop = rect.top
-    const onMove = (moveEvent: PointerEvent): void => {
-      if (moveEvent.pointerId !== pointerId) return
+    const onMove = (moveEvent: MouseEvent): void => {
       const next = clampPosition(
         startLeft + moveEvent.clientX - startX,
         startTop + moveEvent.clientY - startY,
@@ -986,9 +984,8 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       setPosition(next)
     }
     const cleanup = (): void => {
-      window.removeEventListener('pointermove', onMove, true)
-      window.removeEventListener('pointerup', onUp, true)
-      window.removeEventListener('pointercancel', onUp, true)
+      window.removeEventListener('mousemove', onMove, true)
+      window.removeEventListener('mouseup', onUp, true)
       window.removeEventListener('blur', onBlur)
       dragCleanupRef.current = null
     }
@@ -997,42 +994,37 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       setDragging(false)
       persistLayout()
     }
-    const onUp = (upEvent: PointerEvent): void => {
-      if (upEvent.pointerId !== pointerId) return
+    const onUp = (): void => {
       finish()
     }
     const onBlur = (): void => {
       finish()
     }
     dragCleanupRef.current = cleanup
-    window.addEventListener('pointermove', onMove, true)
-    window.addEventListener('pointerup', onUp, true)
-    window.addEventListener('pointercancel', onUp, true)
+    window.addEventListener('mousemove', onMove, true)
+    window.addEventListener('mouseup', onUp, true)
     window.addEventListener('blur', onBlur)
     event.preventDefault()
     setDragging(true)
     panelRef.current?.focus({ preventScroll: true })
   }
 
-  const onResizePointerDown = (event: PointerEvent<HTMLDivElement>): void => {
+  const onResizeMouseDown = (event: MouseEvent<HTMLDivElement>): void => {
     if (fullscreenRef.current || event.button !== 0 || resizeCleanupRef.current !== null) return
     event.preventDefault()
     event.stopPropagation()
-    const pointerId = event.pointerId
     const startX = event.clientX
     const startY = event.clientY
     const startCell = cellRef.current
-    const onMove = (moveEvent: PointerEvent): void => {
-      if (moveEvent.pointerId !== pointerId) return
+    const onMove = (moveEvent: MouseEvent): void => {
       const delta = ((moveEvent.clientX - startX) / 10 + (moveEvent.clientY - startY) / 20) / 2
       const next = clampCell(Math.round(startCell + delta), viewportRef.current)
       cellRef.current = next
       setCell(next)
     }
     const cleanup = (): void => {
-      window.removeEventListener('pointermove', onMove, true)
-      window.removeEventListener('pointerup', onUp, true)
-      window.removeEventListener('pointercancel', onUp, true)
+      window.removeEventListener('mousemove', onMove, true)
+      window.removeEventListener('mouseup', onUp, true)
       window.removeEventListener('blur', onBlur)
       resizeCleanupRef.current = null
     }
@@ -1052,17 +1044,15 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       }
       persistLayout()
     }
-    const onUp = (upEvent: PointerEvent): void => {
-      if (upEvent.pointerId !== pointerId) return
+    const onUp = (): void => {
       finish()
     }
     const onBlur = (): void => {
       finish()
     }
     resizeCleanupRef.current = cleanup
-    window.addEventListener('pointermove', onMove, true)
-    window.addEventListener('pointerup', onUp, true)
-    window.addEventListener('pointercancel', onUp, true)
+    window.addEventListener('mousemove', onMove, true)
+    window.addEventListener('mouseup', onUp, true)
     window.addEventListener('blur', onBlur)
     setResizing(true)
   }
@@ -1096,10 +1086,14 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
       >
         <header
           className="tt-head"
-          title={fullscreen ? undefined : t('aria.drag')}
-          onPointerDown={onHeaderPointerDown}
+          title={fullscreen ? t('aria.dragFullscreen') : t('aria.drag')}
+          onMouseDown={onHeaderMouseDown}
         >
-          <span className="tt-grip" aria-hidden="true">
+          <span
+            className="tt-grip"
+            aria-hidden="true"
+            title={fullscreen ? t('aria.dragFullscreen') : t('aria.drag')}
+          >
             ⠿
           </span>
           <span className="tt-live">
@@ -1279,7 +1273,7 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
           role="separator"
           aria-label={t('aria.resize')}
           title={t('aria.resize')}
-          onPointerDown={onResizePointerDown}
+          onMouseDown={onResizeMouseDown}
         />
       </section>
     </div>
