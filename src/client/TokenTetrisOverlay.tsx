@@ -51,21 +51,6 @@ interface ScreenRect {
   readonly height: number
 }
 
-interface DragState {
-  readonly pointerId: number
-  readonly startX: number
-  readonly startY: number
-  readonly left: number
-  readonly top: number
-}
-
-interface ResizeState {
-  readonly pointerId: number
-  readonly startX: number
-  readonly startY: number
-  readonly cell: number
-}
-
 interface RepeatState {
   timeout: number
   interval: number
@@ -232,8 +217,10 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   positionRef.current = position
   const fullscreenRef = useRef(fullscreen)
   fullscreenRef.current = fullscreen
-  const dragRef = useRef<DragState | null>(null)
-  const resizeRef = useRef<ResizeState | null>(null)
+  const viewportRef = useRef(viewport)
+  viewportRef.current = viewport
+  const dragCleanupRef = useRef<(() => void) | null>(null)
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
 
   const tokens = Math.max(0, tokensPerSecond)
   const rateRef = useRef(tokens)
@@ -941,6 +928,18 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
     panelRef.current?.focus({ preventScroll: true })
   }
 
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.()
+      resizeCleanupRef.current?.()
+      const currentPosition = positionRef.current
+      saveLayout({
+        cell: cellRef.current,
+        ...(currentPosition === null ? {} : { x: currentPosition.x, y: currentPosition.y }),
+      })
+    }
+  }, [])
+
   const onRootPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
     if (!fullscreenRef.current) return
     if (event.target === event.currentTarget) setFullscreen(false)
@@ -955,91 +954,108 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
   }
 
   const onHeaderPointerDown = (event: PointerEvent<HTMLElement>): void => {
-    if (fullscreenRef.current || event.button !== 0) return
+    if (fullscreenRef.current || event.button !== 0 || dragCleanupRef.current !== null) return
     const target = event.target
     if (target instanceof HTMLElement && target.closest('button') !== null) return
     const root = rootRef.current
     if (root === null) return
     const rect = root.getBoundingClientRect()
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      left: rect.left,
-      top: rect.top,
+    const pointerId = event.pointerId
+    const startX = event.clientX
+    const startY = event.clientY
+    const startLeft = rect.left
+    const startTop = rect.top
+    const onMove = (moveEvent: PointerEvent): void => {
+      if (moveEvent.pointerId !== pointerId) return
+      const next = clampPosition(
+        startLeft + moveEvent.clientX - startX,
+        startTop + moveEvent.clientY - startY,
+        cellRef.current,
+        viewportRef.current,
+      )
+      positionRef.current = next
+      setPosition(next)
     }
-    event.currentTarget.setPointerCapture(event.pointerId)
+    const cleanup = (): void => {
+      window.removeEventListener('pointermove', onMove, true)
+      window.removeEventListener('pointerup', onUp, true)
+      window.removeEventListener('pointercancel', onUp, true)
+      window.removeEventListener('blur', onBlur)
+      dragCleanupRef.current = null
+    }
+    const finish = (): void => {
+      cleanup()
+      setDragging(false)
+      persistLayout()
+    }
+    const onUp = (upEvent: PointerEvent): void => {
+      if (upEvent.pointerId !== pointerId) return
+      finish()
+    }
+    const onBlur = (): void => {
+      finish()
+    }
+    dragCleanupRef.current = cleanup
+    window.addEventListener('pointermove', onMove, true)
+    window.addEventListener('pointerup', onUp, true)
+    window.addEventListener('pointercancel', onUp, true)
+    window.addEventListener('blur', onBlur)
     event.preventDefault()
     setDragging(true)
     panelRef.current?.focus({ preventScroll: true })
   }
 
-  const onHeaderPointerMove = (event: PointerEvent<HTMLElement>): void => {
-    const drag = dragRef.current
-    if (drag === null || drag.pointerId !== event.pointerId) return
-    const next = clampPosition(
-      drag.left + event.clientX - drag.startX,
-      drag.top + event.clientY - drag.startY,
-      cellRef.current,
-      viewport,
-    )
-    positionRef.current = next
-    setPosition(next)
-  }
-
-  const endDrag = (event: PointerEvent<HTMLElement>): void => {
-    const drag = dragRef.current
-    if (drag === null) return
-    dragRef.current = null
-    setDragging(false)
-    try {
-      event.currentTarget.releasePointerCapture(drag.pointerId)
-    } catch {
-      // The pointer can already be released by the browser.
-    }
-    persistLayout()
-  }
-
   const onResizePointerDown = (event: PointerEvent<HTMLDivElement>): void => {
-    if (fullscreenRef.current || event.button !== 0) return
+    if (fullscreenRef.current || event.button !== 0 || resizeCleanupRef.current !== null) return
     event.preventDefault()
     event.stopPropagation()
-    resizeRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      cell: cellRef.current,
+    const pointerId = event.pointerId
+    const startX = event.clientX
+    const startY = event.clientY
+    const startCell = cellRef.current
+    const onMove = (moveEvent: PointerEvent): void => {
+      if (moveEvent.pointerId !== pointerId) return
+      const delta = ((moveEvent.clientX - startX) / 10 + (moveEvent.clientY - startY) / 20) / 2
+      const next = clampCell(Math.round(startCell + delta), viewportRef.current)
+      cellRef.current = next
+      setCell(next)
     }
-    event.currentTarget.setPointerCapture(event.pointerId)
+    const cleanup = (): void => {
+      window.removeEventListener('pointermove', onMove, true)
+      window.removeEventListener('pointerup', onUp, true)
+      window.removeEventListener('pointercancel', onUp, true)
+      window.removeEventListener('blur', onBlur)
+      resizeCleanupRef.current = null
+    }
+    const finish = (): void => {
+      cleanup()
+      setResizing(false)
+      const currentPosition = positionRef.current
+      if (currentPosition !== null) {
+        const clamped = clampPosition(
+          currentPosition.x,
+          currentPosition.y,
+          cellRef.current,
+          viewportRef.current,
+        )
+        positionRef.current = clamped
+        setPosition(clamped)
+      }
+      persistLayout()
+    }
+    const onUp = (upEvent: PointerEvent): void => {
+      if (upEvent.pointerId !== pointerId) return
+      finish()
+    }
+    const onBlur = (): void => {
+      finish()
+    }
+    resizeCleanupRef.current = cleanup
+    window.addEventListener('pointermove', onMove, true)
+    window.addEventListener('pointerup', onUp, true)
+    window.addEventListener('pointercancel', onUp, true)
+    window.addEventListener('blur', onBlur)
     setResizing(true)
-  }
-
-  const onResizePointerMove = (event: PointerEvent<HTMLDivElement>): void => {
-    const resize = resizeRef.current
-    if (resize === null || resize.pointerId !== event.pointerId) return
-    const delta = ((event.clientX - resize.startX) / 10 + (event.clientY - resize.startY) / 20) / 2
-    const next = clampCell(Math.round(resize.cell + delta), viewport)
-    cellRef.current = next
-    setCell(next)
-  }
-
-  const endResize = (event: PointerEvent<HTMLDivElement>): void => {
-    const resize = resizeRef.current
-    if (resize === null) return
-    resizeRef.current = null
-    setResizing(false)
-    try {
-      event.currentTarget.releasePointerCapture(resize.pointerId)
-    } catch {
-      // The pointer can already be released by the browser.
-    }
-    const currentPosition = positionRef.current
-    if (currentPosition !== null) {
-      const clamped = clampPosition(currentPosition.x, currentPosition.y, cellRef.current, viewport)
-      positionRef.current = clamped
-      setPosition(clamped)
-    }
-    persistLayout()
   }
 
   const act = (action: GameAction): void => {
@@ -1073,16 +1089,6 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
           className="tt-head"
           title={fullscreen ? undefined : t('aria.drag')}
           onPointerDown={onHeaderPointerDown}
-          onPointerMove={onHeaderPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onLostPointerCapture={() => {
-            if (dragRef.current !== null) {
-              dragRef.current = null
-              setDragging(false)
-              persistLayout()
-            }
-          }}
         >
           <span className="tt-grip" aria-hidden="true">
             ⠿
@@ -1263,17 +1269,8 @@ function TetrisGame({ t, tokensPerSecond }: TetrisGameProps) {
           className="tt-resize"
           role="separator"
           aria-label={t('aria.resize')}
+          title={t('aria.resize')}
           onPointerDown={onResizePointerDown}
-          onPointerMove={onResizePointerMove}
-          onPointerUp={endResize}
-          onPointerCancel={endResize}
-          onLostPointerCapture={() => {
-            if (resizeRef.current !== null) {
-              resizeRef.current = null
-              setResizing(false)
-              persistLayout()
-            }
-          }}
         />
       </section>
     </div>

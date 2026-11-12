@@ -75,11 +75,17 @@ body[data-ds-dark-theme] .tt-panel {
 
 .tt-grip {
   flex: 0 0 auto;
+  padding: 0 1px;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   letter-spacing: -2px;
+  opacity: 0.9;
   cursor: inherit;
+}
+
+.tt-head:hover .tt-grip {
+  color: var(--dsw-alias-label-secondary);
 }
 
 .tt-live {
@@ -529,25 +535,29 @@ body[data-ds-dark-theme] .tt-panel {
 
 .tt-resize {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 16px;
-  height: 16px;
+  right: 1px;
+  bottom: 1px;
+  width: 20px;
+  height: 20px;
   cursor: nwse-resize;
   touch-action: none;
-  opacity: 0.55;
+  opacity: 0.8;
 }
 
 .tt-resize::before {
   content: '';
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid var(--dsw-alias-label-tertiary);
-  border-bottom: 1.5px solid var(--dsw-alias-label-tertiary);
+  right: 4px;
+  bottom: 4px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--dsw-alias-label-tertiary);
+  border-bottom: 2px solid var(--dsw-alias-label-tertiary);
   border-bottom-right-radius: 2px;
+}
+
+.tt-resize:hover::before {
+  border-color: var(--dsw-alias-state-business-primary);
 }
 
 .tt-resize:hover {
