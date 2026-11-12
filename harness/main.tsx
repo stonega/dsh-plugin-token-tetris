@@ -22,12 +22,17 @@ function Harness() {
   const [locale, setLocale] = useState<'en' | 'zh'>('en')
   const [dark, setDark] = useState(false)
   const [onConversation, setOnConversation] = useState(true)
+  const [backgroundAgent, setBackgroundAgent] = useState(false)
 
   if (dark) document.body.dataset.dsDarkTheme = ''
   else delete document.body.dataset.dsDarkTheme
 
   const t = makeTranslate(locale === 'en' ? EN : ZH)
-  const useSessionStatus = () => running
+  const useSessions = (selector: (snapshot: { ids: readonly string[]; byId: Record<string, { running?: boolean; retainedBy?: { mainView?: number } }> }) => boolean) =>
+    selector({
+      ids: ['s1'],
+      byId: { s1: { running, retainedBy: { mainView: backgroundAgent ? 0 : 1 } } },
+    })
   const usePanelInfo = () => onConversation
   const useTokenRate = <T,>(select: (snapshot: { tokensPerSecond: number; activeSessions: number }) => T): T =>
     select({ tokensPerSecond: rate, activeSessions: 1 })
@@ -58,10 +63,13 @@ function Harness() {
         <button type="button" onClick={() => setOnConversation((value) => !value)}>
           panel: {onConversation ? 'conversation' : 'plugins'}
         </button>
+        <button type="button" onClick={() => setBackgroundAgent((value) => !value)}>
+          session: {backgroundAgent ? 'background' : 'main view'}
+        </button>
       </div>
 
       <TokenTetrisOverlay
-        useSessionStatus={useSessionStatus}
+        useSessions={useSessions}
         usePanelInfo={usePanelInfo}
         useTokenRate={useTokenRate}
         t={t}

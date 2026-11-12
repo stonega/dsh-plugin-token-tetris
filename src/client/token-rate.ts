@@ -51,6 +51,9 @@ interface EventWindow {
 
 interface SessionSummary {
   readonly running?: boolean
+  readonly retainedBy?: {
+    readonly mainView?: number
+  }
 }
 
 interface SessionListState {
@@ -175,7 +178,8 @@ export class TokenRateMonitor implements TokenRateSource {
     const state = this.sessions.list.getSnapshot()
     const running = new Set<string>()
     for (const id of state.ids) {
-      if (state.byId[id]?.running === true) running.add(id)
+      const row = state.byId[id]
+      if (row?.running === true && (row.retainedBy?.mainView ?? 0) > 0) running.add(id)
     }
     this.runningCount = running.size
 

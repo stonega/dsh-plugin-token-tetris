@@ -14,8 +14,8 @@
 
 ## 行为
 
-- **只在 Agent 工作时出现**：读取 root 作用域的 `useSessionStatus`，只要至少一个 Session 的 `running === true`，并且当前主面板仍是对话（`usePanelInfo` 的 `activePanelId === null`），才渲染游戏。
-- **token 驱动重力**：监听当前运行中 Session 的 `assistant/live-chunk` 事件，统计 `text-delta`、`reasoning-delta` 和 `tool-call-delta` 的增量，用 2 秒滚动窗口估算 tok/s。映射关系为：
+- **只在当前对话工作时出现**：读取 root 作用域的 `useSessions`，只有主视图正在展示的 Session（`retainedBy.mainView > 0`）且 `running === true`，并且当前主面板仍是对话（`usePanelInfo` 的 `activePanelId === null`），才渲染游戏。切到别的对话或后台 Session 继续运行都不会显示。
+- **token 驱动重力**：只监听当前主对话 Session 的 `assistant/live-chunk` 事件，统计 `text-delta`、`reasoning-delta` 和 `tool-call-delta` 的增量，用 2 秒滚动窗口估算 tok/s。映射关系为：
   - `0 tok/s` → 520 ms/格（比旧版更快的最低速度）
   - `42 tok/s` → 约 114 ms/格
   - `≥ 53 tok/s` → 95 ms/格（下限）
@@ -41,7 +41,7 @@
 ```bash
 dsh plugin --profile web add dsh-plugin-token-tetris
 # 或者：npm pack 后安装本地 tarball
-dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.5.tgz
+dsh plugin --profile web add ./dsh-plugin-token-tetris-0.1.6.tgz
 # 或者：从源码目录 link
 dsh plugin --profile web add /home/stone/Web/dsh-tetris-plugin
 ```
@@ -158,8 +158,8 @@ python3 -m http.server 40710 --bind 127.0.0.1
 ## 实现说明
 
 - **Slot**：`shell.overlay` 是 frame-wide 的 `list` 槽位，默认 click-through；每个条目自行决定是否接收指针事件。插件用 `ctx.slots.inject('shell.overlay', ...)` 等待声明，再把组件注册进去。
-- **状态来源**：`useSessionStatus` 和 `usePanelInfo` 是框架提供的 root 标准 props；token 速率是插件通过注册的 `inject: () => ({ hooks: { tokenRate } })` 暴露的 bare observable，由 renderer 绑定成 `useTokenRate(selector)`。
-- **速率源**：`ctx.sessions.list` 提供 running Session 列表，`ctx.sessions.binding(id).eventSource` 提供已物化 Session 的实时事件窗口。插件只读 append 的 transient chunk，不 retain、不打开历史、不发 Host RPC。
+- **状态来源**：`useSessions` 和 `usePanelInfo` 是框架提供的 root 标准 props；token 速率是插件通过注册的 `inject: () => ({ hooks: { tokenRate } })` 暴露的 bare observable，由 renderer 绑定成 `useTokenRate(selector)`。
+- **速率源**：`ctx.sessions.list` 提供 Session 列表；插件只取 `running && retainedBy.mainView > 0` 的当前主对话，`ctx.sessions.binding(id).eventSource` 提供其实时事件窗口。插件只读 append 的 transient chunk，不 retain、不打开历史、不发 Host RPC。
 - **窗口管理**：拖动/缩放只改变本地几何状态；全屏会测量当前聊天列（`centerCol`）的边界，在 `shell.overlay` 内绘制半透明 backdrop + 居中面板，不改变 DSH 布局本身。
 - **模型侧**：没有任何 model-facing 变更，不写 session 记录；KV cache 不受影响。
 

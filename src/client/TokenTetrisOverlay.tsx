@@ -26,8 +26,16 @@ import type { TokenRateSnapshot } from './token-rate'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
-interface SessionStatusLike {
+interface SessionRowLike {
   readonly running?: boolean
+  readonly retainedBy?: {
+    readonly mainView?: number
+  }
+}
+
+interface SessionListLike {
+  readonly ids: readonly string[]
+  readonly byId: Readonly<Record<string, SessionRowLike | undefined>>
 }
 
 interface PanelInfoLike {
@@ -86,15 +94,16 @@ const MIN_FULLSCREEN_CELL = 16
 const SIDE_MIN = 74
 
 export interface TokenTetrisOverlayProps {
-  useSessionStatus: (selector: (snapshot: ReadonlyMap<string, SessionStatusLike>) => boolean) => boolean
+  useSessions: (selector: (snapshot: SessionListLike) => boolean) => boolean
   usePanelInfo: (selector: (info: PanelInfoLike) => boolean) => boolean
   useTokenRate: <T>(selector: (snapshot: TokenRateSnapshot) => T) => T
   t: Translate
 }
 
-function anySessionRunning(statuses: ReadonlyMap<string, SessionStatusLike>): boolean {
-  for (const status of statuses.values()) {
-    if (status.running === true) return true
+function activeChatRunning(snapshot: SessionListLike): boolean {
+  for (const id of snapshot.ids) {
+    const row = snapshot.byId[id]
+    if (row?.running === true && (row.retainedBy?.mainView ?? 0) > 0) return true
   }
   return false
 }
@@ -165,7 +174,7 @@ function clampPosition(x: number, y: number, cell: number, viewport: Viewport): 
  * but the game itself exists only while at least one Agent is running.
  */
 export function TokenTetrisOverlay(props: TokenTetrisOverlayProps) {
-  const agentRunning = props.useSessionStatus(anySessionRunning)
+  const agentRunning = props.useSessions(activeChatRunning)
   const onConversation = props.usePanelInfo(conversationVisible)
   const tokensPerSecond = props.useTokenRate(selectTokenRate)
 

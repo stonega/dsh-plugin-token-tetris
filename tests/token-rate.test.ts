@@ -16,7 +16,7 @@ class Source<T> {
   }
 }
 
-const list = new Source<any>({ ids: ['s1'], byId: { s1: { running: true } } })
+const list = new Source<any>({ ids: ['s1', 's2'], byId: { s1: { running: true, retainedBy: { mainView: 1 } }, s2: { running: true, retainedBy: { mainView: 0 } } } })
 const events = new Source<any>({ change: { kind: 'replace', entries: [] } })
 const binding = { sessionId: 's1', eventSource: events }
 const sessions = { list, binding: (id: string) => (id === 's1' ? binding : undefined) }
@@ -48,7 +48,7 @@ assert.ok(monitor.getSnapshot().tokensPerSecond <= afterReplace + 1)
 await new Promise((resolve) => setTimeout(resolve, 2200))
 assert.equal(monitor.getSnapshot().tokensPerSecond, 0)
 
-list.set({ ids: ['s1'], byId: { s1: { running: false } } })
+list.set({ ids: ['s1', 's2'], byId: { s1: { running: false, retainedBy: { mainView: 1 } }, s2: { running: true, retainedBy: { mainView: 0 } } } })
 await new Promise((resolve) => setTimeout(resolve, 250))
 assert.equal(monitor.getSnapshot().activeSessions, 0)
 
